@@ -1,7 +1,9 @@
 import { Component, OnInit, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RestaurantService } from '../services/restaurant.service';
+import { RewardService } from '../services/reward.service';
 import { IRestaurant } from '../models/restaurant.model';
+import { IReward } from '../models/reward.model';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormControl } from '@angular/forms';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog';
@@ -28,7 +30,10 @@ export class RestaurantList implements OnInit {
   showAllRestaurants = false;
   showAllData = false;
   
-  constructor(private api: RestaurantService, private fb: FormBuilder, private cdr: ChangeDetectorRef, private dialog: MatDialog) {
+  showRewardForm: { [key: string]: boolean } = {};
+  newRewardForm!: FormGroup;
+
+  constructor(private api: RestaurantService, private rewardApi: RewardService, private fb: FormBuilder, private cdr: ChangeDetectorRef, private dialog: MatDialog) {
     this.restaurantForm = this.fb.group({
       name: ['', Validators.required],
       description: ['', Validators.required],
@@ -62,6 +67,12 @@ export class RestaurantList implements OnInit {
       rewards: [''],
       statistics: [''],
       badges: [''],
+    });
+
+    this.newRewardForm = this.fb.group({
+      name: ['', Validators.required],
+      description: ['', Validators.required],
+      pointsRequired: [0, [Validators.min(0)]]
     });
 
     this.searchControl = new FormControl('');
@@ -217,4 +228,75 @@ export class RestaurantList implements OnInit {
       }
     });
   }
+
+  toggleRewardForm(restaurantId: string): void {
+    this.showRewardForm[restaurantId] = !this.showRewardForm[restaurantId];
+    if (this.showRewardForm[restaurantId]) {
+      this.newRewardForm.reset();
+      this.newRewardForm.patchValue({ pointsRequired: 0 });
+    }
+  }
+
+  saveReward(restaurant: IRestaurant): void {
+    if (this.newRewardForm.invalid || !restaurant._id) return;
+
+    this.loading = true;
+    this.cdr.markForCheck();
+
+    const data: Partial<IReward> = {
+      restaurant_id: restaurant._id,
+      name: this.newRewardForm.value.name,
+      description: this.newRewardForm.value.description,
+      pointsRequired: this.newRewardForm.value.pointsRequired,
+      active: true
+    };
+
+    this.rewardApi.createReward(data).subscribe({
+      next: (savedReward) => {
+        if (!restaurant.rewards) restaurant.rewards = [];
+        restaurant.rewards.push(savedReward);
+        this.showRewardForm[restaurant._id!] = false;
+        this.loading = false;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.errorMsg = 'Could not add reward.';
+        this.loading = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  removeReward(restaurant: IRestaurant, reward: any): void {
+    const rewardName = reward.name || 'this reward';
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: `Delete ${rewardName}?`
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        const rewardId = reward._id || reward.id;
+        if (!rewardId) return;
+
+        this.loading = true;
+        this.cdr.markForCheck();
+
+        this.rewardApi.deleteReward(rewardId).subscribe({
+          next: () => {
+            if (restaurant.rewards) {
+              restaurant.rewards = restaurant.rewards.filter((r: any) => (r._id || r.id || r) !== rewardId);
+            }
+            this.loading = false;
+            this.cdr.markForCheck();
+          },
+          error: () => {
+            this.errorMsg = 'Could not remove reward.';
+            this.loading = false;
+            this.cdr.markForCheck();
+          }
+        });
+      }
+    });
+  }
 }
+

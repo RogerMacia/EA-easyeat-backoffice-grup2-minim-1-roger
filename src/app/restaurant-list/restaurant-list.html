@@ -304,7 +304,50 @@
 
       <p>Employees' IDs: {{ restaurant.employees }}</p>
       <p>Dishs' IDs: {{ restaurant.dishes }}</p>
-      <p>Rewards' IDs: {{ restaurant.rewards }}</p>
+      
+      @if (restaurant.rewards && restaurant.rewards.length > 0) {
+        <div>
+          <p>Rewards:</p>
+          <ul>
+            <li *ngFor="let reward of restaurant.rewards">
+              <span style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                <ng-container *ngIf="$any(reward).name; else stringReward">
+                  {{ $any(reward).name }} - {{ $any(reward).description || 'No description' }} (Points: {{ $any(reward).points || $any(reward).pointsRequired || 0 }})
+                </ng-container>
+                <ng-template #stringReward>
+                  ID: {{ reward }}
+                </ng-template>
+                <button type="button" class="btn delete-btn" style="padding: 2px 5px; font-size: 12px; background-color: #f44336; border: none; color: white; cursor: pointer; border-radius: 3px;" (click)="removeReward(restaurant, reward)">X</button>
+              </span>
+            </li>
+          </ul>
+        </div>
+      } @else {
+        <p>Rewards: None</p>
+      }
+
+      <div style="margin-top: 10px;">
+        <button type="button" class="btn" (click)="toggleRewardForm(restaurant._id!)">
+          {{ showRewardForm[restaurant._id!] ? 'Cancel Reward' : 'Add Reward' }}
+        </button>
+
+        <form *ngIf="showRewardForm[restaurant._id!]" [formGroup]="newRewardForm" (ngSubmit)="saveReward(restaurant)" style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
+          <div style="margin-bottom: 5px;">
+            <label>Name: </label>
+            <input type="text" formControlName="name" style="width: 100%;" />
+          </div>
+          <div style="margin-bottom: 5px;">
+            <label>Description: </label>
+            <input type="text" formControlName="description" style="width: 100%;" />
+          </div>
+          <div style="margin-bottom: 5px;">
+            <label>Points Required: </label>
+            <input type="number" formControlName="pointsRequired" style="width: 100%;" />
+          </div>
+          <button type="submit" class="btn" [disabled]="newRewardForm.invalid" style="margin-top: 5px;">Save Reward</button>
+        </form>
+      </div>
+
       <p>Statistics' IDs: {{ restaurant.statistics }}</p>
       <p>Badges' IDs: {{ restaurant.badges }}</p>
     </div>

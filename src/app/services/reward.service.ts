@@ -1,6 +1,22 @@
 import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
+import { IReward } from '../models/reward.model';
 
 @Injectable({
   providedIn: 'root',
 })
-export class RewardService {}
+export class RewardService {
+  private baseUrl = environment.apiUrl;
+
+  constructor(private http: HttpClient) {}
+
+  createReward(data: Partial<IReward>): Observable<IReward> {
+    return this.http.post<IReward>(`${this.baseUrl}/rewards`, data);
+  }
+
+  deleteReward(rewardId: string): Observable<IReward> {
+    return this.http.delete<IReward>(`${this.baseUrl}/rewards/${rewardId}`);
+  }
+}

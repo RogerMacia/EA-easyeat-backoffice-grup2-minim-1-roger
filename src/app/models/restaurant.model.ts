@@ -1,3 +1,5 @@
+import { IReward } from './reward.model';
+
 export interface IRestaurant {
     _id?: string;
     profile: {
@@ -31,7 +33,7 @@ export interface IRestaurant {
     };
     employees?: string[];
     dishes?: string[];
-    rewards?: string[];
+    rewards?: (string | IReward)[];
     statistics?: string;
     badges?: string[];
 }
