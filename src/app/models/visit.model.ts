@@ -1,8 +1,9 @@
 export interface IVisit {
     _id?: string;
-    customer_id: string;            // reference to Customer
-    restaurant_id: string;          // reference to Restaurant
-    date: Date;
+    id?: string;
+    customer_id: any;            // reference to Customer
+    restaurant_id: any;          // reference to Restaurant
+    date: Date | string;
     pointsEarned?: number;
     billAmount?: number;
 }

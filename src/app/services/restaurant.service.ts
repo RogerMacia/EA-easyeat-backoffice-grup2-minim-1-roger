@@ -15,7 +15,7 @@ export class RestaurantService {
   createRestaurant(data: Partial<IRestaurant>): Observable<IRestaurant> {
     return this.http.post<IRestaurant>(
       `${this.baseUrl}/restaurants`,
-      { data }
+      data
     );
   }
 
@@ -34,7 +34,7 @@ export class RestaurantService {
   updateRestaurant(restaurantId: string, data: Partial<IRestaurant>): Observable<IRestaurant> {
     return this.http.put<IRestaurant>(
       `${this.baseUrl}/restaurants/${restaurantId}`,
-      { data }
+      data
     );
   }
 

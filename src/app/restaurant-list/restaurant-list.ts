@@ -2,8 +2,10 @@ import { Component, OnInit, ChangeDetectorRef, ChangeDetectionStrategy } from '@
 import { CommonModule } from '@angular/common';
 import { RestaurantService } from '../services/restaurant.service';
 import { RewardService } from '../services/reward.service';
+import { VisitService } from '../services/visit.service';
 import { IRestaurant } from '../models/restaurant.model';
 import { IReward } from '../models/reward.model';
+import { IVisit } from '../models/visit.model';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormControl } from '@angular/forms';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog';
@@ -29,11 +31,20 @@ export class RestaurantList implements OnInit {
   limit = 10;
   showAllRestaurants = false;
   showAllData = false;
-  
+
   showRewardForm: { [key: string]: boolean } = {};
   newRewardForm!: FormGroup;
 
-  constructor(private api: RestaurantService, private rewardApi: RewardService, private fb: FormBuilder, private cdr: ChangeDetectorRef, private dialog: MatDialog) {
+  editingRewardId: string | null = null;
+  editRewardForm!: FormGroup;
+
+  restaurantVisits: { [key: string]: IVisit[] } = {};
+  showVisitForm: { [key: string]: boolean } = {};
+  newVisitForm!: FormGroup;
+  editingVisitId: string | null = null;
+  editVisitForm!: FormGroup;
+
+  constructor(private api: RestaurantService, private rewardApi: RewardService, private visitApi: VisitService, private fb: FormBuilder, private cdr: ChangeDetectorRef, private dialog: MatDialog) {
     this.restaurantForm = this.fb.group({
       name: ['', Validators.required],
       description: ['', Validators.required],
@@ -75,6 +86,25 @@ export class RestaurantList implements OnInit {
       pointsRequired: [0, [Validators.min(0)]]
     });
 
+    this.editRewardForm = this.fb.group({
+      name: ['', Validators.required],
+      description: ['', Validators.required],
+      pointsRequired: [0, [Validators.min(0)]]
+    });
+
+    this.newVisitForm = this.fb.group({
+      customer_id: ['', Validators.required],
+      date: [new Date().toISOString().substring(0, 16), Validators.required],
+      billAmount: [0, [Validators.min(0)]],
+      pointsEarned: [0, [Validators.min(0)]]
+    });
+
+    this.editVisitForm = this.fb.group({
+      date: ['', Validators.required],
+      billAmount: [0, [Validators.min(0)]],
+      pointsEarned: [0, [Validators.min(0)]]
+    });
+
     this.searchControl = new FormControl('');
   }
 
@@ -83,11 +113,11 @@ export class RestaurantList implements OnInit {
 
     this.searchControl.valueChanges.subscribe(value => {
       const term = value?.toLowerCase() ?? '';
-  
+
       this.filteredRestaurants = this.restaurants.filter(restaurant =>
         restaurant.profile.name.toLowerCase().includes(term)
       );
-    }); 
+    });
   }
 
   load(): void {
@@ -127,7 +157,7 @@ export class RestaurantList implements OnInit {
 
   showMore(): void {
     this.showAllRestaurants = true;
-  } 
+  }
 
   get visibleRestaurants(): IRestaurant[] {
     if (this.showAllRestaurants) {
@@ -146,40 +176,72 @@ export class RestaurantList implements OnInit {
     });
   }
 
-  // save(): void {
-  //   if (this.restaurantForm.invalid) return;
+  save(): void {
+    if (this.restaurantForm.invalid) return;
 
-  //   const name: string = this.restaurantForm.value.name;
+    const name: string = this.restaurantForm.value.name;
 
-  //   if (this.editting && this.restaurantEditId) {
+    if (this.editting && this.restaurantEditId) {
+      this.api.updateRestaurant(this.restaurantEditId, { profile: { name, description: '', category: [], location: { city: '', address: '' } } } as any)
+        .subscribe({
+          next: () => {
+            this.resetForm();
+            this.load();
+          },
+          error: () => {
+            this.errorMsg = 'Could not update the restaurant.';
+          }
+        });
+    } else {
+      const newRestaurant: Partial<IRestaurant> = {
+        profile: {
+          name,
+          description: this.restaurantForm.value.description || 'No description',
+          category: this.restaurantForm.value.category ? [this.restaurantForm.value.category] : ['Italià'],
+          location: {
+            city: this.restaurantForm.value.city || 'Unknown',
+            address: this.restaurantForm.value.address || '',
+            coordinates: {
+              type: 'Point' as any,
+              coordinates: [
+                parseFloat(this.restaurantForm.value.lon) || 0,
+                parseFloat(this.restaurantForm.value.lat) || 0
+              ]
+            }
+          }
+        }
+      };
 
-  //     this.api.updateRestaurant(this.restaurantEditId, name)
-  //       .subscribe({
-  //         next: () => {
-  //           this.resetForm();
-  //           this.load();
-  //         },
-  //         error: () => {
-  //           this.errorMsg = 'Could not update the restaurant.';
-  //         }
-  //       });
-
-  //   } else {
-  //     this.api.createRestaurant(name)
-  //       .subscribe({
-  //         next: () => {
-  //           this.resetForm();
-  //           this.load();
-  //         },
-  //         error: () => {
-  //           this.errorMsg = 'Could not create the restaurant.';
-  //         }
-  //       });
-  //   }
-  // }
+      this.api.createRestaurant(newRestaurant)
+        .subscribe({
+          next: () => {
+            this.resetForm();
+            this.load();
+          },
+          error: () => {
+            this.errorMsg = 'Could not create the restaurant.';
+          }
+        });
+    }
+  }
 
   toggleExpand(id: string): void {
     this.expanded[id] = !this.expanded[id];
+    if (this.expanded[id] && !this.restaurantVisits[id]) {
+      this.loading = true;
+      this.visitApi.getVisitsByRestaurantId(id).subscribe({
+        next: (visits) => {
+          this.restaurantVisits[id] = visits;
+          this.loading = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.errorMsg = 'Could not load visits.';
+          this.loading = false;
+          this.cdr.markForCheck();
+        }
+      });
+    }
   }
 
   resetForm(): void {
@@ -295,6 +357,191 @@ export class RestaurantList implements OnInit {
             this.cdr.markForCheck();
           }
         });
+      }
+    });
+  }
+
+  startEditReward(reward: any): void {
+    const rewardId = reward._id || reward.id || reward;
+    if (!rewardId) return;
+    this.editingRewardId = rewardId;
+    this.editRewardForm.patchValue({
+      name: reward.name || '',
+      description: reward.description || '',
+      pointsRequired: reward.pointsRequired !== undefined ? reward.pointsRequired : (reward.points || 0)
+    });
+  }
+
+  cancelEditReward(): void {
+    this.editingRewardId = null;
+    this.editRewardForm.reset();
+  }
+
+  saveEditedReward(restaurant: IRestaurant): void {
+    if (this.editRewardForm.invalid || !this.editingRewardId) return;
+
+    this.loading = true;
+    this.cdr.markForCheck();
+
+    const data: Partial<IReward> = {
+      name: this.editRewardForm.value.name,
+      description: this.editRewardForm.value.description,
+      pointsRequired: this.editRewardForm.value.pointsRequired
+    };
+
+    const targetRewardId = this.editingRewardId;
+
+    this.rewardApi.updateReward(targetRewardId, data).subscribe({
+      next: (updatedReward) => {
+        if (restaurant.rewards) {
+          const index = restaurant.rewards.findIndex((r: any) => (r._id || r.id || r) === targetRewardId);
+          if (index !== -1) {
+            restaurant.rewards[index] = updatedReward;
+          }
+        }
+        this.editingRewardId = null;
+        this.loading = false;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.errorMsg = 'Could not update reward.';
+        this.loading = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  toggleVisitForm(restaurantId: string): void {
+    this.showVisitForm[restaurantId] = !this.showVisitForm[restaurantId];
+    if (this.showVisitForm[restaurantId]) {
+      this.newVisitForm.reset();
+      this.newVisitForm.patchValue({ 
+        date: new Date().toISOString().substring(0, 16),
+        billAmount: 0, 
+        pointsEarned: 0 
+      });
+    }
+  }
+
+  saveVisit(restaurantId: string): void {
+    if (this.newVisitForm.invalid) return;
+
+    this.loading = true;
+    this.cdr.markForCheck();
+
+    const data: Partial<IVisit> = {
+      restaurant_id: restaurantId as any,
+      customer_id: this.newVisitForm.value.customer_id,
+      date: new Date(this.newVisitForm.value.date),
+      billAmount: this.newVisitForm.value.billAmount,
+      pointsEarned: this.newVisitForm.value.pointsEarned
+    };
+
+    this.visitApi.createVisit(data).subscribe({
+      next: (savedVisit) => {
+        if (!this.restaurantVisits[restaurantId]) this.restaurantVisits[restaurantId] = [];
+        this.showVisitForm[restaurantId] = false;
+        
+        this.visitApi.getVisitsByRestaurantId(restaurantId).subscribe(visits => {
+           this.restaurantVisits[restaurantId] = visits;
+           this.loading = false;
+           this.cdr.markForCheck();
+        });
+      },
+      error: () => {
+        this.errorMsg = 'Could not add visit.';
+        this.loading = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  removeVisit(restaurantId: string, visit: IVisit): void {
+    const customerName = visit.customer_id?.name || 'this customer';
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: `Delete visit from ${customerName}?`
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        const visitId = visit._id || visit.id;
+        if (!visitId) return;
+
+        this.loading = true;
+        this.cdr.markForCheck();
+
+        this.visitApi.deleteVisit(visitId).subscribe({
+          next: () => {
+            if (this.restaurantVisits[restaurantId]) {
+              this.restaurantVisits[restaurantId] = this.restaurantVisits[restaurantId].filter((v: IVisit) => (v._id || v.id) !== visitId);
+            }
+            this.loading = false;
+            this.cdr.markForCheck();
+          },
+          error: () => {
+            this.errorMsg = 'Could not remove visit.';
+            this.loading = false;
+            this.cdr.markForCheck();
+          }
+        });
+      }
+    });
+  }
+
+  startEditVisit(visit: any): void {
+    const visitId = visit._id || visit.id;
+    if (!visitId) return;
+    this.editingVisitId = visitId;
+    
+    let dateStr = '';
+    if (visit.date) {
+      const d = new Date(visit.date);
+      if (!isNaN(d.getTime())) {
+         dateStr = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().substring(0, 16);
+      }
+    }
+    
+    this.editVisitForm.patchValue({
+      date: dateStr,
+      billAmount: visit.billAmount || 0,
+      pointsEarned: visit.pointsEarned || 0
+    });
+  }
+
+  cancelEditVisit(): void {
+    this.editingVisitId = null;
+    this.editVisitForm.reset();
+  }
+
+  saveEditedVisit(restaurantId: string): void {
+    if (this.editVisitForm.invalid || !this.editingVisitId) return;
+
+    this.loading = true;
+    this.cdr.markForCheck();
+
+    const data: Partial<IVisit> = {
+      date: new Date(this.editVisitForm.value.date),
+      billAmount: this.editVisitForm.value.billAmount,
+      pointsEarned: this.editVisitForm.value.pointsEarned
+    };
+
+    const targetVisitId = this.editingVisitId;
+
+    this.visitApi.updateVisit(targetVisitId, data).subscribe({
+      next: () => {
+        this.visitApi.getVisitsByRestaurantId(restaurantId).subscribe({
+           next: (visits) => {
+             this.restaurantVisits[restaurantId] = visits;
+             this.editingVisitId = null;
+             this.loading = false;
+             this.cdr.markForCheck();
+           }
+        });
+      },
+      error: () => {
+        this.errorMsg = 'Could not update visit.';
+        this.loading = false;
+        this.cdr.markForCheck();
       }
     });
   }

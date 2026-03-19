@@ -1,4 +1,5 @@
 import { IReward } from './reward.model';
+import { IVisit } from './visit.model'; 
 
 export interface IRestaurant {
     _id?: string;
@@ -26,7 +27,7 @@ export interface IRestaurant {
             address: string;
             googlePlaceId?: string;
             coordinates: {
-                type: { type: String, enum: ['Point'], default: 'Point' },
+                type: string; 
                 coordinates: [number, number]; // [longitude, latitude]
             };
         };
@@ -36,4 +37,5 @@ export interface IRestaurant {
     rewards?: (string | IReward)[];
     statistics?: string;
     badges?: string[];
+    visits?: (string | IVisit)[]; 
 }
