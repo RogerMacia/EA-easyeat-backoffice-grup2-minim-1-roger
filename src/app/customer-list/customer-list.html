@@ -33,11 +33,17 @@
       <div>
         <label>Email:</label>
         <input type="text" formControlName="email" />
-      </div>
+        <small style="color: red;" *ngIf="customerForm.get('email')?.hasError('email') && customerForm.get('email')?.touched">
+        El email debe ser correcto.
+      </small>
+        </div>
 
       <div>
         <label>Password:</label>
         <input type="text" formControlName="password" />
+        <small style="color: red;" *ngIf="customerForm.get('password')?.hasError('pattern') && customerForm.get('password')?.touched">
+        La contraseña debe tener al menos 8 caracteres y una mayuscula.
+      </small>
       </div>
 
       <button class="btn" type="submit" [disabled]="customerForm.invalid">

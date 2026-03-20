@@ -74,8 +74,8 @@ export class CustomerList implements OnInit {
 
     this.customerForm = this.fb.group({
       name: ['', Validators.required],
-      email: ['', Validators.required],
-      password: ['', Validators.required],
+      email: ['', [Validators.required, Validators.email]],
+      password: ['', [Validators.required,Validators.pattern(/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/)]],
     });
 
     this.reviewForm = this.fb.group({
