@@ -22,7 +22,7 @@ export class RestaurantList implements OnInit {
   filteredRestaurants: IRestaurant[] = [];
   pagedRestaurants: IRestaurant[] = [];
   searchControl = new FormControl('');
-  search = true;
+  search = false;
   loading = true;
   errorMsg = '';
   showForm = false;
@@ -30,10 +30,11 @@ export class RestaurantList implements OnInit {
   editting = false;
   restaurantEditId: string | undefined;
   expanded: { [key: string]: boolean } = {};
-  limit = 2;
+  limit = 3;
   currentPage = 1;
   showAllRestaurants = false;
   showAllData = false;
+  goToPageControl = new FormControl<number | null>(1);
 
   showRewardForm: { [key: string]: boolean } = {};
   newRewardForm!: FormGroup;
@@ -149,6 +150,8 @@ export class RestaurantList implements OnInit {
       this.filteredRestaurants = this.restaurants.filter(restaurant =>
         restaurant.profile.name.toLowerCase().includes(term)
       );
+      this.currentPage = 1;
+      this.updatePagedRestaurants();
     });
   }
 
@@ -161,9 +164,7 @@ export class RestaurantList implements OnInit {
       next: (res) => {
         this.restaurants = res;
         this.filteredRestaurants = [...this.restaurants];
-        if (res.length > 2) {
-          this.pagedRestaurants = this.filteredRestaurants.slice(this.currentPage*this.limit - this.limit, this.currentPage*this.limit);
-        }
+        this.updatePagedRestaurants();
         this.loading = false;
         this.cdr.markForCheck();
       },
@@ -725,17 +726,44 @@ export class RestaurantList implements OnInit {
     });
   }
 
-  leftPage(): void {
-    if (this.currentPage > 1) {
-      this.currentPage--;
-      this.load();
+  rightPage(): void {
+    if (this.currentPage < this.getTotalPages()) {
+      this.currentPage++;
+      this.updatePagedRestaurants();
     }
   }
 
-  rightPage(): void {
-    if (this.currentPage * 2 < this.filteredRestaurants.length) {
-      this.currentPage++;
-      this.load();
+  goToPage(): void {
+    const requestedPage = Number(this.goToPageControl.value);
+    if (!Number.isFinite(requestedPage)) return;
+
+    const totalPages = this.getTotalPages();
+    const safePage = Math.min(Math.max(1, Math.trunc(requestedPage)), totalPages);
+
+    this.currentPage = safePage;
+    this.goToPageControl.setValue(safePage, { emitEvent: false });
+    this.updatePagedRestaurants();
+  }
+
+  getTotalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredRestaurants.length / this.limit));
+  }
+
+  private updatePagedRestaurants(): void {
+    const totalPages = this.getTotalPages();
+    this.currentPage = Math.min(Math.max(1, this.currentPage), totalPages);
+
+    const start = (this.currentPage - 1) * this.limit;
+    const end = start + this.limit;
+    this.pagedRestaurants = this.filteredRestaurants.slice(start, end);
+    this.goToPageControl.setValue(this.currentPage, { emitEvent: false });
+    this.cdr.markForCheck();
+  }
+
+  leftPage(): void {
+    if (this.currentPage > 1) {
+      this.currentPage--;
+      this.updatePagedRestaurants();
     }
   }
 }

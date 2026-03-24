@@ -520,13 +520,26 @@
 </ul>
 
 <div class="footer">
-  <button class="btn" (click)="leftPage()">
+  <button class="btn" (click)="leftPage()" [disabled]="currentPage <= 1">
     ⬅ Previous
   </button>
-  <p class="btn">{{ currentPage }}</p>
-  <button class="btn" (click)="rightPage()">
+
+  <p class="btn">Page {{ currentPage }} / {{ getTotalPages() }}</p>
+
+  <button class="btn" (click)="rightPage()" [disabled]="currentPage >= getTotalPages()">
     Next ➡
   </button>
+
+  <label for="goToPageInput" style="margin-left: 8px;">Go to page:</label>
+  <input
+    id="goToPageInput"
+    type="number"
+    [formControl]="goToPageControl"
+    min="1"
+    [max]="getTotalPages()"
+    style="width: 80px;"
+  />
+  <button class="btn" type="button" (click)="goToPage()">Go</button>
 
   <p *ngIf="!loading && !errorMsg && pagedRestaurants.length === 0">
     No organizations.
