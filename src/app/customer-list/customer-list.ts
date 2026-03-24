@@ -38,7 +38,8 @@ export class CustomerList implements OnInit {
   editting = false;
   showForm = false;
   showAllCustomers = false;
-  limit = 10;
+  limit = 2;
+  currentPage = 1;
   expanded: { [key: string]: boolean } = {};
 
   // ========================
@@ -112,6 +113,7 @@ export class CustomerList implements OnInit {
       this.filteredCustomers = this.customers.filter(c =>
         c.name.toLowerCase().includes(term)
       );
+      this.currentPage = 1;
     });
   }
 
@@ -128,6 +130,7 @@ export class CustomerList implements OnInit {
         const data = res?.data ?? res ?? [];
         this.customers = data;
         this.filteredCustomers = [...data];
+        this.currentPage = 1;
         this.loading = false;
         this.cdr.detectChanges();
       },
@@ -230,13 +233,25 @@ export class CustomerList implements OnInit {
   }
 
   get visibleCustomers(): ICustomer[] {
-    return this.showAllCustomers
-      ? this.filteredCustomers
-      : this.filteredCustomers.slice(0, this.limit);
+    const start = (this.currentPage - 1) * this.limit;
+    const end = start + this.limit;
+    return this.filteredCustomers.slice(start, end);
   }
 
-  showMore(): void {
-    this.showAllCustomers = true;
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredCustomers.length / this.limit));
+  }
+
+  nextCustomersPage(): void {
+    if (this.currentPage < this.totalPages) {
+      this.currentPage++;
+    }
+  }
+
+  prevCustomersPage(): void {
+    if (this.currentPage > 1) {
+      this.currentPage--;
+    }
   }
 
   // ========================

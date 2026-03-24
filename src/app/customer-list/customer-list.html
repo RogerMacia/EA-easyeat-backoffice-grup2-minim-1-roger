@@ -256,12 +256,18 @@
   </ul>
 }
 
-@if (!showAllCustomers && customers.length > limit) {
-  <button class="btn" (click)="showMore()">Show more</button>
-}
+@if (!loading && !errorMsg && filteredCustomers.length > 0) {
+  <div style="display:flex; align-items:center; gap:10px; margin-top:12px;">
+    <button class="btn" type="button" (click)="prevCustomersPage()" [disabled]="currentPage === 1">
+      ⬅ Prev
+    </button>
 
-@if (showAllCustomers) {
-  <button class="btn" (click)="showAllCustomers = false">Show less</button>
+    <span>Page {{ currentPage }} / {{ totalPages }}</span>
+
+    <button class="btn" type="button" (click)="nextCustomersPage()" [disabled]="currentPage >= totalPages">
+      Next ➡
+    </button>
+  </div>
 }
 
 @if (!loading && !errorMsg && customers.length === 0) {
