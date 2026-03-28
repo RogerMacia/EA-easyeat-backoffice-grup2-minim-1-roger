@@ -272,6 +272,10 @@ export class RestaurantList implements OnInit {
   save(): void {
     if (this.restaurantForm.invalid) return;
 
+    this.loading = true;
+    this.errorMsg = '';
+    this.cdr.markForCheck();
+
     const monday: { open: string; close: string }[] | undefined = this.restaurantForm.value.monday ? this.restaurantForm.value.monday.split(',').map((slot: string) => {
       const [open, close] = slot.split('-');
       return { open, close };
@@ -397,10 +401,12 @@ export class RestaurantList implements OnInit {
           next: () => {
             this.resetForm();
             this.load();
-            setTimeout(() => this.cdr.detectChanges());
           },
-          error: () => {
+          error: (err) => {
             this.errorMsg = 'Could not update the restaurant.';
+            console.error(err);
+            this.loading = false;
+            this.cdr.markForCheck();
           }
         });
 
@@ -411,8 +417,12 @@ export class RestaurantList implements OnInit {
             this.resetForm();
             this.load();
           },
-          error: () => {
+          error: (err) => {
             this.errorMsg = 'Could not create the restaurant.';
+            this.errorMsg = 'Could not create the restaurant.';
+            console.error(err);
+            this.loading = false;
+            this.cdr.markForCheck();
           }
         });
     }
