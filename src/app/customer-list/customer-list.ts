@@ -37,7 +37,6 @@ export class CustomerList implements OnInit {
   customerForm!: FormGroup;
   editting = false;
   showForm = false;
-  showAllCustomers = false;
   limit = 2;
   currentPage = 1;
   expanded: { [key: string]: boolean } = {};
@@ -66,11 +65,6 @@ export class CustomerList implements OnInit {
   isEditingVisit = false;
   currentCustomerId: string | null = null;
   selectedVisitId: string | null = null;
-  visitCurrentPage: number = 1;
-  visitPageSize: number = 5;
-  visitTotalPages: number = 1;
-  visitTotalItems: number = 0;
-  visitsByCustomer: { [customerId: string]: IVisit[] } = {};
   visitPage: { [customerId: string]: number } = {};
   visitLimit = 5;
   visitsExpanded: { [customerId: string]: boolean } = {};
@@ -203,14 +197,14 @@ export class CustomerList implements OnInit {
     });
   }
 
-  delete(id: string): void {
-    this.api.deleteCustomer(id).subscribe(() => this.load());
+  hardDdelete(id: string): void {
+    this.api.hardDeleteCustomer(id).subscribe(() => this.load());
   }
 
   confirmDelete(id: string, name?: string): void {
     const dialogRef = this.dialog.open(ConfirmDialogComponent, { data: name });
     dialogRef.afterClosed().subscribe(result => {
-      if (result) this.delete(id);
+      if (result) this.hardDdelete(id);
     });
   }
 
@@ -281,13 +275,12 @@ export class CustomerList implements OnInit {
   toggleExpand(id: string): void {
     this.expanded[id] = !this.expanded[id];
 
-    // 🔥 LOAD VISITS WHEN EXPANDING
+    // LOAD VISITS WHEN EXPANDING
     if (this.expanded[id]) {
       this.reviewPage[id] = 0;
       this.loadReviews(id);
       
       // NEW: Load visits on expand
-      console.log(`📂 [toggleExpand] Expanded customer: ${id}, loading visits...`);
       this.visitPage[id] = 0;
       this.loadVisits(id);
     }
@@ -464,8 +457,8 @@ export class CustomerList implements OnInit {
   // ========================
 
   changeVisitPage(page: number): void {
-    if (page >= 1 && page <= this.visitTotalPages) {
-      this.visitCurrentPage = page;
+    if (page >= 1 && page <= this.totalPages) {
+      this.currentPage = page;
       if (this.currentCustomerId) {
         this.loadVisits(this.currentCustomerId);
       }
@@ -560,19 +553,17 @@ export class CustomerList implements OnInit {
 // ========================
 
 
-loadVisits(customerId: string): void {
-  console.log(`📡 [loadVisits] Called for customerId: ${customerId}`);
-  
+loadVisits(customerId: string): void { 
   if (!customerId) {
-    console.error('❌ [loadVisits] customerId is undefined or null!');
+    console.error('[loadVisits] customerId is undefined or null!');
     return;
   }
   
-  console.log(`📡 [loadVisits] Calling service.getVisitsByCustomerId('${customerId}')`);
+  console.log(`[loadVisits] Calling service.getVisitsByCustomerId('${customerId}')`);
   
   this.visitService.getVisitsByCustomerId(customerId).subscribe({
     next: (response: any) => {
-      console.log(`✅ [loadVisits] Response received:`, response);
+      console.log(`[loadVisits] Response received:`, response);
       
       let allVisits: IVisit[] = [];
       
@@ -584,11 +575,11 @@ loadVisits(customerId: string): void {
         allVisits = [];
       }
 
-      console.log(`✅ [loadVisits] Total visits: ${allVisits.length}`);
+      console.log(`[loadVisits] Total visits: ${allVisits.length}`);
 
       let filtered = [...allVisits];
 
-      // 🔥 FIX: Handle undefined values in sort
+      // FIX: Handle undefined values in sort
       filtered.sort((a, b) => {
         let aVal = a[this.visitSortField];
         let bVal = b[this.visitSortField];
@@ -612,20 +603,20 @@ loadVisits(customerId: string): void {
       const skip = page * this.visitLimit;
       const paginatedVisits = filtered.slice(skip, skip + this.visitLimit);
 
-      console.log(`📊 [loadVisits] Paginating: page ${page}, limit ${this.visitLimit}, total shown: ${paginatedVisits.length}`);
+      console.log(` [loadVisits] Paginating: page ${page}, limit ${this.visitLimit}, total shown: ${paginatedVisits.length}`);
 
       this.customerVisits = {
         ...this.customerVisits,
         [customerId]: paginatedVisits
       };
 
-      console.log(`✅ [loadVisits] Stored in customerVisits[${customerId}]:`, paginatedVisits);
+      console.log(` [loadVisits] Stored in customerVisits[${customerId}]:`, paginatedVisits);
 
       this.cdr.detectChanges();
-      console.log(`✅ [loadVisits] Complete!`);
+      console.log(`[loadVisits] Complete!`);
     },
     error: (err) => {
-      console.error(`❌ [loadVisits] Error:`, err);
+      console.error(`[loadVisits] Error:`, err);
       this.customerVisits[customerId] = [];
       this.cdr.detectChanges();
     }
@@ -673,7 +664,7 @@ loadVisits(customerId: string): void {
   }
 
   getVisitsByCustomer(customerId: string): IVisit[] {
-    return this.visitsByCustomer[customerId] || [];
+    return this.getVisitsByCustomer(customerId) || [];
   }
 
 }

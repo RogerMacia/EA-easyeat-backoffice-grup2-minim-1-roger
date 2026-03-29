@@ -38,12 +38,6 @@ export class RestaurantService {
     );
   }
 
-  getRestaurantWithCustomers(restaurantId: string): Observable<IRestaurant> {
-    return this.http.get<IRestaurant>(
-      `${this.baseUrl}/restaurants/${restaurantId}`
-    );
-  }
-
   getRestaurantFull(restaurantId: string): Observable<IRestaurant> {
     return this.http.get<IRestaurant>(
       `${this.baseUrl}/restaurants/${restaurantId}/full`
@@ -52,7 +46,7 @@ export class RestaurantService {
 
   getNearbyRestaurants(lng: number, lat: number, maxDistance: number): Observable<IRestaurant> {
     return this.http.get<IRestaurant>(
-      `${this.baseUrl}/restaurants/neraby`
+      `${this.baseUrl}/restaurants/nearby?lng=${lng}&lat=${lat}&maxDistance=${maxDistance}`
     );
   }
 

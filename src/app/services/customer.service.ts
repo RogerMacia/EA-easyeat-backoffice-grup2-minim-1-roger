@@ -12,9 +12,9 @@ export class CustomerService {
 
   constructor(private http: HttpClient) {}
 
-  createCustomer(data: any) {
-  return this.http.post(`${this.baseUrl}/customers`, data);
-}
+  createCustomer(data: Partial<ICustomer>): Observable<ICustomer> {
+    return this.http.post<ICustomer>(`${this.baseUrl}/customers`, data);
+  }
 
   getCustomerById(customerId: string): Observable<ICustomer> {
     return this.http.get<ICustomer>(
@@ -47,15 +47,9 @@ softDeleteCustomer(customerId: string): Observable<ICustomer> {
     );
   }
 
-  deleteCustomer(customerId: string): Observable<ICustomer> {
+  hardDeleteCustomer(customerId: string): Observable<ICustomer> {
     return this.http.delete<ICustomer>(
-      `${this.baseUrl}/customers/${customerId}/soft`
+      `${this.baseUrl}/customers/${customerId}/hard`
     );
   }
-
-  /*getCustomerWithRestaurant(customerId: string): Observable<ICustomer> {
-    return this.http.get<ICustomer>(
-      `${this.baseUrl}/customer/${customerId}`
-    );
-  }*/
 }
