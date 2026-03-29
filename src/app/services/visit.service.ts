@@ -32,6 +32,12 @@ export class VisitService {
     return this.http.get<any>(`${this.baseUrl}/visits`, { params });
   }
 
+  getVisitsByCustomerId(customerId: string): Observable<IVisit[]> {
+    return this.http.get<IVisit[]>(
+      `${this.baseUrl}/customers/${customerId}/visits`
+    );
+  }
+
   createVisit(data: Partial<IVisit>): Observable<IVisit> {
     return this.http.post<IVisit>(`${this.baseUrl}/visits`, data);
   }

@@ -70,6 +70,12 @@ export class CustomerList implements OnInit {
   visitPageSize: number = 5;
   visitTotalPages: number = 1;
   visitTotalItems: number = 0;
+  visitsByCustomer: { [customerId: string]: IVisit[] } = {};
+  visitPage: { [customerId: string]: number } = {};
+  visitLimit = 5;
+  visitsExpanded: { [customerId: string]: boolean } = {};
+  visitSortField: 'date' | 'billAmount' | 'pointsEarned' = 'date';
+  visitSortOrder: 'asc' | 'desc' = 'desc';
 
   constructor(
     private api: CustomerService,
@@ -451,39 +457,6 @@ export class CustomerList implements OnInit {
   // VISITS
   // ========================
 
-  loadVisits(customerId: string): void {
-    this.loadingVisits[customerId] = true;
-    this.customerVisits = { ...this.customerVisits, [customerId]: [] };
-    this.currentCustomerId = customerId;
-    this.cdr.markForCheck();
-
-    this.visitService.getVisitsByCustomer(customerId, this.visitCurrentPage, this.visitPageSize).subscribe({
-      next: (res: any) => {
-        console.log('customerId recibido:', customerId);
-        console.log('res.data:', res.data);
-        console.log('customerVisits ANTES:', JSON.stringify(this.customerVisits));
-
-        this.customerVisits = {
-          ...this.customerVisits,
-          [customerId]: res.data ?? []
-        };
-
-        console.log('customerVisits DESPUÉS:', JSON.stringify(this.customerVisits));
-
-        this.visitTotalPages = res.pagination?.pages ?? 1;
-        this.visitTotalItems = res.pagination?.total ?? 0;
-        this.loadingVisits[customerId] = false;
-        this.cdr.detectChanges();
-      },
-      error: (err: any) => {
-        console.error('Error loading visits', err);
-        this.customerVisits = { ...this.customerVisits, [customerId]: [] };
-        this.loadingVisits[customerId] = false;
-        this.cdr.markForCheck();
-      }
-    });
-  }
-
   changeVisitPage(page: number): void {
     if (page >= 1 && page <= this.visitTotalPages) {
       this.visitCurrentPage = page;
@@ -575,4 +548,90 @@ export class CustomerList implements OnInit {
     this.selectedVisitId = null;
     this.visitForm.reset();
   }
+
+  // ========================
+// VISITS LOADING & PAGINATION
+// ========================
+
+  loadVisits(customerId: string): void {
+    this.visitService.getVisitsByCustomerId(customerId).subscribe((res: any) => {
+      // Get all visits
+      const allVisits = res?.data ?? res ?? [];
+
+      // Apply filter (if needed in future)
+      let filtered = [...allVisits];
+
+      // Apply sort
+      filtered.sort((a, b) => {
+        let aVal = a[this.visitSortField];
+        let bVal = b[this.visitSortField];
+
+        if (this.visitSortField === 'date') {
+          aVal = new Date(aVal).getTime();
+          bVal = new Date(bVal).getTime();
+        }
+
+        if (aVal < bVal) return this.visitSortOrder === 'asc' ? -1 : 1;
+        if (aVal > bVal) return this.visitSortOrder === 'asc' ? 1 : -1;
+        return 0;
+      });
+
+      // Apply pagination
+      const page = this.visitPage[customerId] || 0;
+      const skip = page * this.visitLimit;
+      const paginatedVisits = filtered.slice(skip, skip + this.visitLimit);
+
+      // Store full list for pagination
+      this.visitsByCustomer = {
+        ...this.visitsByCustomer,
+        [customerId]: paginatedVisits
+      };
+
+      this.cdr.detectChanges();
+    });
+  }
+
+  toggleVisitsExpand(customerId: string): void {
+    this.visitsExpanded[customerId] = !this.visitsExpanded[customerId];
+
+    if (this.visitsExpanded[customerId]) {
+      this.visitPage[customerId] = 0;
+      this.loadVisits(customerId);
+    }
+  }
+
+  nextVisitPage(customerId: string): void {
+    const page = this.visitPage[customerId] || 0;
+    this.visitService.getVisitsByCustomerId(customerId).subscribe((res: any) => {
+      const allVisits = res?.data ?? res ?? [];
+      const total = allVisits.length;
+
+      if ((page + 1) * this.visitLimit >= total) return;
+
+      this.visitPage[customerId] = page + 1;
+      this.loadVisits(customerId);
+    });
+  }
+
+  prevVisitPage(customerId: string): void {
+    if ((this.visitPage[customerId] || 0) === 0) return;
+
+    this.visitPage[customerId]--;
+    this.loadVisits(customerId);
+  }
+
+  setVisitSort(field: 'date' | 'billAmount' | 'pointsEarned', customerId: string): void {
+    if (this.visitSortField === field) {
+      this.visitSortOrder = this.visitSortOrder === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.visitSortField = field;
+      this.visitSortOrder = 'desc';
+    }
+    this.loadVisits(customerId);
+  }
+
+  getVisitsByCustomer(customerId: string): IVisit[] {
+    return this.visitsByCustomer[customerId] || [];
+  }
+
 }
