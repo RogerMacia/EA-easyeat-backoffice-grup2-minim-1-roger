@@ -689,7 +689,7 @@ export class CustomerList implements OnInit {
   }
 
   getVisitsByCustomer(customerId: string): IVisit[] {
-    return this.getVisitsByCustomer(customerId) || [];
+    return this.customerVisits[customerId] || [];
   }
 
   goToVisitPage(customerId: string): void {
