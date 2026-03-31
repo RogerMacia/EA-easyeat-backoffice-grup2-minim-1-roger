@@ -30,9 +30,11 @@ export class CustomerList implements OnInit {
   // ========================
   customers: ICustomer[] = [];
   filteredCustomers: ICustomer[] = [];
+  pagedCustomers: ICustomer[] = [];
   customerEditId?: string;
-  loading = true;
-  errorMsg = '';
+  searching: boolean = false;
+  loading: boolean = true;
+  errorMsg: string = '';
   searchControl = new FormControl('');
   customerForm!: FormGroup;
   editting = false;
@@ -110,10 +112,12 @@ export class CustomerList implements OnInit {
 
     this.searchControl.valueChanges.subscribe(value => {
       const term = value?.toLowerCase().trim() ?? '';
+      term ? this.searching = true : this.searching = false;
       this.filteredCustomers = this.customers.filter(c =>
         c.name.toLowerCase().includes(term)
       );
       this.currentPage = 1;
+      this.updatePagedCustomers();
     });
   }
 
@@ -130,7 +134,7 @@ export class CustomerList implements OnInit {
         const data = res?.data ?? res ?? [];
         this.customers = data;
         this.filteredCustomers = [...data];
-        this.currentPage = 1;
+        this.updatePagedCustomers();
         this.loading = false;
         this.cdr.detectChanges();
       },
@@ -188,7 +192,8 @@ export class CustomerList implements OnInit {
       next: () => {
         (customer as ICustomer & { active?: boolean }).active = wasDisabled;
         this.filteredCustomers = [...this.filteredCustomers];
-        this.cdr.detectChanges();
+        this.pagedCustomers = [... this.pagedCustomers];
+        this.cdr.markForCheck();
       },
       error: (err) => {
         console.error(err);
@@ -233,9 +238,10 @@ export class CustomerList implements OnInit {
   }
 
   get visibleCustomers(): ICustomer[] {
-    const start = (this.currentPage - 1) * this.limit;
-    const end = start + this.limit;
-    return this.filteredCustomers.slice(start, end);
+    if (this.searching) {
+      return this.filteredCustomers;
+    }
+    return this.pagedCustomers;
   }
 
   get totalPages(): number {
@@ -245,12 +251,14 @@ export class CustomerList implements OnInit {
   nextCustomersPage(): void {
     if (this.currentPage < this.totalPages) {
       this.currentPage++;
+      this.updatePagedCustomers();
     }
   }
 
   prevCustomersPage(): void {
     if (this.currentPage > 1) {
       this.currentPage--;
+      this.updatePagedCustomers();
     }
   }
 
@@ -549,79 +557,79 @@ export class CustomerList implements OnInit {
   }
 
   // ========================
-// VISITS LOADING & PAGINATION
-// ========================
+  // VISITS LOADING & PAGINATION
+  // ========================
 
 
-loadVisits(customerId: string): void { 
-  if (!customerId) {
-    console.error('[loadVisits] customerId is undefined or null!');
-    return;
-  }
-  
-  console.log(`[loadVisits] Calling service.getVisitsByCustomerId('${customerId}')`);
-  
-  this.visitService.getVisitsByCustomerId(customerId).subscribe({
-    next: (response: any) => {
-      console.log(`[loadVisits] Response received:`, response);
-      
-      let allVisits: IVisit[] = [];
-      
-      if (Array.isArray(response)) {
-        allVisits = response;
-      } else if (response?.data && Array.isArray(response.data)) {
-        allVisits = response.data;
-      } else {
-        allVisits = [];
-      }
-
-      console.log(`[loadVisits] Total visits: ${allVisits.length}`);
-
-      let filtered = [...allVisits];
-
-      // FIX: Handle undefined values in sort
-      filtered.sort((a, b) => {
-        let aVal = a[this.visitSortField];
-        let bVal = b[this.visitSortField];
-
-        // Handle undefined values
-        if (aVal === undefined || aVal === null) aVal = '';
-        if (bVal === undefined || bVal === null) bVal = '';
-
-        if (this.visitSortField === 'date') {
-          const aTime = new Date(aVal as string | number).getTime();
-          const bTime = new Date(bVal as string | number).getTime();
-          return this.visitSortOrder === 'asc' ? aTime - bTime : bTime - aTime;
+  loadVisits(customerId: string): void { 
+    if (!customerId) {
+      console.error('[loadVisits] customerId is undefined or null!');
+      return;
+    }
+    
+    console.log(`[loadVisits] Calling service.getVisitsByCustomerId('${customerId}')`);
+    
+    this.visitService.getVisitsByCustomerId(customerId).subscribe({
+      next: (response: any) => {
+        console.log(`[loadVisits] Response received:`, response);
+        
+        let allVisits: IVisit[] = [];
+        
+        if (Array.isArray(response)) {
+          allVisits = response;
+        } else if (response?.data && Array.isArray(response.data)) {
+          allVisits = response.data;
+        } else {
+          allVisits = [];
         }
 
-        if (aVal < bVal) return this.visitSortOrder === 'asc' ? -1 : 1;
-        if (aVal > bVal) return this.visitSortOrder === 'asc' ? 1 : -1;
-        return 0;
-      });
+        console.log(`[loadVisits] Total visits: ${allVisits.length}`);
 
-      const page = this.visitPage[customerId] || 0;
-      const skip = page * this.visitLimit;
-      const paginatedVisits = filtered.slice(skip, skip + this.visitLimit);
+        let filtered = [...allVisits];
 
-      console.log(` [loadVisits] Paginating: page ${page}, limit ${this.visitLimit}, total shown: ${paginatedVisits.length}`);
+        // FIX: Handle undefined values in sort
+        filtered.sort((a, b) => {
+          let aVal = a[this.visitSortField];
+          let bVal = b[this.visitSortField];
 
-      this.customerVisits = {
-        ...this.customerVisits,
-        [customerId]: paginatedVisits
-      };
+          // Handle undefined values
+          if (aVal === undefined || aVal === null) aVal = '';
+          if (bVal === undefined || bVal === null) bVal = '';
 
-      console.log(` [loadVisits] Stored in customerVisits[${customerId}]:`, paginatedVisits);
+          if (this.visitSortField === 'date') {
+            const aTime = new Date(aVal as string | number).getTime();
+            const bTime = new Date(bVal as string | number).getTime();
+            return this.visitSortOrder === 'asc' ? aTime - bTime : bTime - aTime;
+          }
 
-      this.cdr.detectChanges();
-      console.log(`[loadVisits] Complete!`);
-    },
-    error: (err) => {
-      console.error(`[loadVisits] Error:`, err);
-      this.customerVisits[customerId] = [];
-      this.cdr.detectChanges();
-    }
-  });
-}
+          if (aVal < bVal) return this.visitSortOrder === 'asc' ? -1 : 1;
+          if (aVal > bVal) return this.visitSortOrder === 'asc' ? 1 : -1;
+          return 0;
+        });
+
+        const page = this.visitPage[customerId] || 0;
+        const skip = page * this.visitLimit;
+        const paginatedVisits = filtered.slice(skip, skip + this.visitLimit);
+
+        console.log(` [loadVisits] Paginating: page ${page}, limit ${this.visitLimit}, total shown: ${paginatedVisits.length}`);
+
+        this.customerVisits = {
+          ...this.customerVisits,
+          [customerId]: paginatedVisits
+        };
+
+        console.log(` [loadVisits] Stored in customerVisits[${customerId}]:`, paginatedVisits);
+
+        this.cdr.detectChanges();
+        console.log(`[loadVisits] Complete!`);
+      },
+      error: (err) => {
+        console.error(`[loadVisits] Error:`, err);
+        this.customerVisits[customerId] = [];
+        this.cdr.detectChanges();
+      }
+    });
+  }
 
 
   toggleVisitsExpand(customerId: string): void {
@@ -667,4 +675,14 @@ loadVisits(customerId: string): void {
     return this.getVisitsByCustomer(customerId) || [];
   }
 
+  private updatePagedCustomers(): void {
+    const totalPages = this.totalPages;
+    this.currentPage = Math.min(Math.max(1, this.currentPage), totalPages);
+
+    const start = (this.currentPage - 1) * this.limit;
+    const end = start + this.limit;
+    this.pagedCustomers = this.filteredCustomers.slice(start, end);
+    // this.goToPageControl.setValue(this.currentPage, { emitEvent: false });
+    this.cdr.markForCheck();
+  }
 }

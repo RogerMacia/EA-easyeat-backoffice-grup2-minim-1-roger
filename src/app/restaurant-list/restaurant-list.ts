@@ -25,9 +25,9 @@ export class RestaurantList implements OnInit {
   filteredRestaurants: IRestaurant[] = [];
   pagedRestaurants: IRestaurant[] = [];
   searchControl = new FormControl('');
-  search = false;
-  loading = true;
-  errorMsg = '';
+  search: boolean = false;
+  loading: boolean = true;
+  errorMsg: string = '';
   showForm = false;
   restaurantForm!: FormGroup;
   editting = false;
