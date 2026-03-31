@@ -624,14 +624,14 @@
       </div>
 
       <div style="margin-top: 20px; padding-top: 10px; border-top: 1px solid #ccc;">
-        <p><strong>Visitas recibidas:</strong></p>
+        <p><strong>Received visits:</strong></p>
         
         <p *ngIf="loading && expanded[restaurant._id!] && !restaurantVisits[restaurant._id!]">Loading visits...</p>
 
         <ul *ngIf="restaurantVisits[restaurant._id!] && restaurantVisits[restaurant._id!].length > 0">
           <li *ngFor="let visit of restaurantVisits[restaurant._id!]">
             <span style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;" *ngIf="editingVisitId !== (visit._id || visit.id)">
-              Cliente: {{ visit.customer_id?.name || 'Desconocido' }} — {{ visit.billAmount | number:'1.2-2' }}€ — {{ visit.pointsEarned }}pts — {{ visit.date | date:'dd/MM/yyyy' }}
+              Customer: {{ visit.customer_id?.name || 'Unknown' }} — {{ visit.billAmount | number:'1.2-2' }}€ — {{ visit.pointsEarned }}pts — {{ visit.date | date:'dd/MM/yyyy' }}
               
               <button type="button" class="btn" style="padding: 2px 5px; font-size: 12px; border-radius: 3px;" (click)="startEditVisit(visit)">Edit</button>
               <button type="button" class="btn delete-btn" style="padding: 2px 5px; font-size: 12px; background-color: #f44336; border: none; color: white; cursor: pointer; border-radius: 3px;" (click)="removeVisit(restaurant._id!, visit)">X</button>
@@ -648,34 +648,45 @@
             </div>
           </li>
         </ul>
-        <p *ngIf="restaurantVisits[restaurant._id!] && restaurantVisits[restaurant._id!].length === 0">No hay visitas registradas.</p>
+        @if (restaurantVisits[restaurant._id!] && restaurantVisits[restaurant._id!].length === 0) {
+          <p>No registered visits.</p>
+        }
 
         <div style="margin-top: 10px;">
           <button type="button" class="btn" (click)="toggleVisitForm(restaurant._id!)">
             {{ showVisitForm[restaurant._id!] ? 'Cancel Visit' : 'Add Visit' }}
           </button>
 
-          <form *ngIf="showVisitForm[restaurant._id!]" [formGroup]="newVisitForm" (ngSubmit)="saveVisit(restaurant._id!)" style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
-            <div style="margin-bottom: 5px;">
-              <label>Customer ID: </label>
-              <input type="text" formControlName="customer_id" style="width: 100%;" placeholder="65f1c... (MongoDB ObjectId)" />
-            </div>
-            <div style="margin-bottom: 5px;">
-              <label>Date: </label>
-              <input type="datetime-local" formControlName="date" style="width: 100%;" />
-            </div>
-            <div style="display: flex; gap: 10px; margin-bottom: 5px;">
-              <div style="flex: 1;">
-                <label>Bill Amount (€): </label>
-                <input type="number" formControlName="billAmount" style="width: 100%;" step="0.01" />
-              </div>
-              <div style="flex: 1;">
-                <label>Points Earned: </label>
-                <input type="number" formControlName="pointsEarned" style="width: 100%;" />
-              </div>
-            </div>
-            <button type="submit" class="btn" [disabled]="newVisitForm.invalid" style="margin-top: 5px;">Save Visit</button>
-          </form>
+          @if (showVisitForm[restaurant._id!]) {
+            @if (loadingCustomers) { <p>Loading customers...</p> }
+            @else if (!errorMsg) {
+              <form [formGroup]="newVisitForm" (ngSubmit)="saveVisit(restaurant._id!)" style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
+                <div style="margin-bottom: 5px;">
+                  <label>Customer: </label>
+                  <select type="text" formControlName="customer_id" style="width: 100%;">
+                    <option value="" disabled selected>Select customer</option>
+                    @for (customer of customers; track customer._id) { <option [value]="customer._id">{{ customer.name }}</option> }
+                  </select>
+                </div>
+                <div style="margin-bottom: 5px;">
+                  <label>Date: </label>
+                  <input type="datetime-local" formControlName="date" style="width: 100%;" />
+                </div>
+                <div style="display: flex; gap: 10px; margin-bottom: 5px;">
+                  <div style="flex: 1;">
+                    <label>Bill Amount (€): </label>
+                    <input type="number" formControlName="billAmount" style="width: 100%;" step="0.01" />
+                  </div>
+                  <div style="flex: 1;">
+                    <label>Points Earned: </label>
+                    <input type="number" formControlName="pointsEarned" style="width: 100%;" />
+                  </div>
+                </div>
+                <button type="submit" class="btn" [disabled]="newVisitForm.invalid" style="margin-top: 5px;">Save Visit</button>
+              </form>
+            }
+            @else { <p>errorMsg</p> }
+          }
         </div>
       </div>
     </div>

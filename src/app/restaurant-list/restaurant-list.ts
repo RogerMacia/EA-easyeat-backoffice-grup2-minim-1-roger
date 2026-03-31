@@ -9,6 +9,8 @@ import { IVisit } from '../models/visit.model';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormControl } from '@angular/forms';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog';
+import { ICustomer } from '../models/customer.model';
+import { CustomerService } from '../services/customer.service';
 
 @Component({
   selector: 'app-restaurant-list',
@@ -19,6 +21,7 @@ import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog';
 })
 export class RestaurantList implements OnInit {
   restaurants: IRestaurant[] = [];
+  customers: ICustomer[] = [];
   filteredRestaurants: IRestaurant[] = [];
   pagedRestaurants: IRestaurant[] = [];
   searchControl = new FormControl('');
@@ -47,11 +50,13 @@ export class RestaurantList implements OnInit {
   newVisitForm!: FormGroup;
   editingVisitId: string | null = null;
   editVisitForm!: FormGroup;
+  loadingCustomers: boolean = false;
 
   constructor(
     private api: RestaurantService,
     private rewardApi: RewardService,
     private visitApi: VisitService,
+    private customerApi: CustomerService,
     private fb: FormBuilder,
     private cdr: ChangeDetectorRef,
     private dialog: MatDialog
@@ -573,6 +578,22 @@ export class RestaurantList implements OnInit {
         date: new Date().toISOString().substring(0, 16),
         billAmount: 0,
         pointsEarned: 0
+      });
+
+      this.errorMsg = '';
+      this.loadingCustomers = true;
+      this.customerApi.getCustomers().subscribe({
+        next: (res: any) => {
+          const data = res?.data ?? res ?? [];
+          this.customers = data;
+          this.loadingCustomers = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.errorMsg = 'Could not load customers.';
+          this.loadingCustomers = false;
+          this.cdr.markForCheck();
+        }
       });
     }
   }
