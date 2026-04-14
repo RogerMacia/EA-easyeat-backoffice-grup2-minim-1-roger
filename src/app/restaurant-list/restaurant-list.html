@@ -868,12 +868,14 @@
           </form>
         </div><!-- end add employee -->
 
+        <!-- TASKS SECTION -->
+        <div>
+          <app-task [restaurantId]="restaurant._id"></app-task>
+        </div>
       }
     </div><!-- end .data -->
   </li>
 </ul>
-
-
 
 <div class="footer">
   <button class="btn-custom btn-primary" (click)="leftPage()" [disabled]="currentPage <= 1">

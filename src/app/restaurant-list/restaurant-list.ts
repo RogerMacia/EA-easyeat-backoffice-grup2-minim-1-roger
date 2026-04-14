@@ -15,11 +15,12 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog';
 import { ICustomer } from '../models/customer.model';
 import { CustomerService } from '../services/customer.service';
+import { Task } from '../task/task';
 
 @Component({
   selector: 'app-restaurant-list',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MatDialogModule],
+  imports: [CommonModule, ReactiveFormsModule, MatDialogModule, Task],
   templateUrl: './restaurant-list.html',
   styleUrls: ['./restaurant-list.css'],
 })
@@ -98,7 +99,7 @@ export class RestaurantList implements OnInit {
     private customerApi: CustomerService,
     private fb: FormBuilder,
     private cdr: ChangeDetectorRef,
-    private dialog: MatDialog
+    private dialog: MatDialog,
   ) {
     this.restaurantForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(120)]],

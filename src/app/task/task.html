@@ -1,0 +1,17 @@
+@for (task of tasks; track task._id) {
+<div *ngFor="let key of objectKeys(task.tasks)">
+  <label>
+    <input
+      type="checkbox"
+      [(ngModel)]="task.tasks[key]"
+    />
+    {{ key }}
+  </label>
+</div>
+}
+
+<button class="btn" type="button" (click)="createTask()">Create task</button>
+
+<button class="btn" type="button" (click)="load()">Load</button>
+
+<p>aaaaaaaaaaaaaaaaaaaaaa</p>
