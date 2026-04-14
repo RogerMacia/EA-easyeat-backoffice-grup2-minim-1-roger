@@ -1,8 +1,10 @@
 claude.ai
 
+# 1
+
 En HTML d'Angular, si tinc un checkbox i un objecte que té a dins un { [key: string]: boolean } (digem-li item) amb una key (un text) i un boolean, com puc fer perquè es registri el boolean en el checkbox i que quan canvii, que se n'adoni el typescript
 
-
+## Resposta:
 
 En Angular, pots fer servir `[(ngModel)]` o el binding de formularis reactius. Aquí la manera més senzilla amb `ngModel`:
 
@@ -105,15 +107,21 @@ O si és un component standalone:
 El `[(ngModel)]` és el binding bidireccional: llegeix el valor inicial del boolean **i** actualitza'l automàticament quan l'usuari fa clic.
 
 
-Canvi:
-@for (task of tasks; track task._id) {
-<div *ngFor="let key of objectKeys(task.tasks)">
+# Utilitzat:
+```html
+<div *ngFor="let key of objectKeys(item)">
   <label>
     <input
       type="checkbox"
-      [(ngModel)]="task.tasks[key]"
+      [(ngModel)]="item[key]"
     />
     {{ key }}
   </label>
 </div>
-}
+```
+
+i
+
+```typescript
+objectKeys = Object.keys;
+```
